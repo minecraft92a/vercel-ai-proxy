@@ -11,28 +11,34 @@ const VERCEL_KEY = process.env.VERCEL_KEY;
 
 app.post("/v1/chat/completions", async (req, res) => {
   try {
+    // Make sure body is valid JSON
+    const body = req.body;
+
+    if (!body || !body.model || !body.messages) {
+      return res.status(400).json({ error: "Invalid request format. Must include model and messages." });
+    }
+
     const response = await fetch(VERCEL_API, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${VERCEL_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(body),
     });
 
-    const text = await response.text(); // read as text first
-    let data;
+    const text = await response.text();
+
+    // Try parsing JSON, otherwise return error
     try {
-      data = JSON.parse(text); // parse JSON safely
-    } catch (err) {
-      // if JSON parsing fails, return raw text
+      const data = JSON.parse(text);
+      return res.json(data);
+    } catch {
       return res.status(response.status).json({
         error: "Invalid JSON from Vercel AI",
         raw: text
       });
     }
-
-    res.json(data);
 
   } catch (err) {
     res.status(500).json({ error: err.message });
