@@ -4,16 +4,13 @@ import cors from "cors";
 
 const app = express();
 app.use(express.json());
-
-// Allow Janitor AI requests from anywhere
 app.use(cors());
 
 const VERCEL_API = "https://ai-gateway.vercel.sh/v1/ai/chat/completions";
-const VERCEL_KEY = process.env.VERCEL_KEY; // Your real Vercel API key
+const VERCEL_KEY = process.env.VERCEL_KEY;
 
 app.post("/v1/chat/completions", async (req, res) => {
   try {
-    // Forward request to Vercel AI
     const response = await fetch(VERCEL_API, {
       method: "POST",
       headers: {
@@ -23,11 +20,18 @@ app.post("/v1/chat/completions", async (req, res) => {
       body: JSON.stringify(req.body),
     });
 
-    const data = await response.json();
+    const text = await response.text(); // read as text first
+    let data;
+    try {
+      data = JSON.parse(text); // parse JSON safely
+    } catch (err) {
+      // if JSON parsing fails, return raw text
+      return res.status(response.status).json({
+        error: "Invalid JSON from Vercel AI",
+        raw: text
+      });
+    }
 
-    // Send JSON response with CORS headers
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.json(data);
 
   } catch (err) {
